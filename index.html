@@ -1,7 +1,66 @@
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+  }
+  h1 {
+    color: #333;
+  }
+  input, select, button {
+    font-size: 20px;
+    padding: 10px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+  input {
+    width: 100px;
+  }
+  button {
+    background: #4a7cff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #3a63cc;
+  }
+  #out {
+    font-size: 32px;
+    font-weight: bold;
+    color: #222;
+  }
+</style>
+
+<h1>Calculator</h1>
+<div>
+  <input id="a" type="number">
+  <select id="op">
+    <option>+</option><option>-</option><option>*</option><option>/</option><option>%</option><option>**</option>
+  </select>
+  <input id="b" type="number">
+  <button onclick="calc()">=</button>
+</div>
+<p id="out"></p>
+
+<script>
+async function calc() {
+  const q = ["a", "op", "b"]
+    .map(id => id + "=" + encodeURIComponent(document.getElementById(id).value))
+    .join("&");
+  const data = await (await fetch("/calc?" + q)).json();
+  document.getElementById("out").textContent = data.result ?? data.error;
+}
+</script>
+
 <h1>Calculator</h1>
 <input id="a" type="number">
 <select id="op">
-  <option>+</option><option>-</option><option>*</option><option>/</option>
+  <option>+</option><option>-</option><option>*</option><option>/</option><option>%</option><option>**</option>
 </select>
 <input id="b" type="number">
 <button onclick="calc()">=</button>

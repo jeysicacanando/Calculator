@@ -4,6 +4,8 @@ def calculate(a, op, b):
     if op == "+": return a + b
     if op == "-": return a - b
     if op == "*": return a * b
+    if op == "%": return a % b
+    if op == "**": return a ** b
     if op == "/":
         if b == 0:
             raise ValueError("Cannot divide by zero")
