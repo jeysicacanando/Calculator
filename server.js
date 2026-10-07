@@ -15,7 +15,8 @@ http.createServer((req, res) => {
       return res.end(JSON.stringify({ error: "Fill in both numbers" }));
     }
 
-    execFile("python", ["calculator.py", a, op, b], (err, stdout) => {
+    const PYTHON = process.platform === "win32" ? "python" : "python3";
+    execFile(PYTHON, ["calculator.py", a, op, b], (err, stdout) => {
       res.end(JSON.stringify(err
         ? { error: stdout.trim() || "Something went wrong" }
         : { result: stdout.trim() }));
@@ -24,4 +25,4 @@ http.createServer((req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(fs.readFileSync("index.html"));
   }
-}).listen(3000, () => console.log("Running at http://localhost:3000"));
+}).listen(process.env.PORT || 3000, () => console.log("Server running"));
