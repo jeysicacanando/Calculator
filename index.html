@@ -1,0 +1,18 @@
+<h1>Calculator</h1>
+<input id="a" type="number">
+<select id="op">
+  <option>+</option><option>-</option><option>*</option><option>/</option>
+</select>
+<input id="b" type="number">
+<button onclick="calc()">=</button>
+<p id="out"></p>
+
+<script>
+async function calc() {
+  const q = ["a", "op", "b"]
+    .map(id => id + "=" + encodeURIComponent(document.getElementById(id).value))
+    .join("&");
+  const data = await (await fetch("/calc?" + q)).json();
+  document.getElementById("out").textContent = data.result ?? data.error;
+}
+</script>
