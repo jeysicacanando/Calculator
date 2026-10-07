@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <meta charset="UTF-8">
 <style>
   body {
@@ -5,6 +6,7 @@
     background: #f0f2f5;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     padding: 40px;
   }
   #calc {
@@ -41,6 +43,7 @@
   .op { background: #4a7cff; }
   .fn { background: #666; }
   .eq { background: #ff9500; }
+  .sci { background: #555; font-size: 18px; padding: 14px 0; }
 </style>
 
 <div id="calc">
@@ -49,10 +52,20 @@
     <div id="display">0</div>
   </div>
   <div id="keys">
-  <button class="fn" data-k="C">C</button>
-  <button class="fn" data-k="±">±</button>
-  <button class="op" data-k="%">%</button>
-  <button class="op" data-k="/">÷</button>
+    <button class="sci" data-k="sqrt">√</button>
+    <button class="sci" data-k="sq">x²</button>
+    <button class="sci" data-k="inv">1/x</button>
+    <button class="sci" data-k="log">log</button>
+
+    <button class="sci" data-k="ln">ln</button>
+    <button class="sci" data-k="sin">sin</button>
+    <button class="sci" data-k="cos">cos</button>
+    <button class="sci" data-k="tan">tan</button>
+
+    <button class="fn" data-k="C">C</button>
+    <button class="fn" data-k="±">±</button>
+    <button class="op" data-k="%">%</button>
+    <button class="op" data-k="/">÷</button>
 
     <button data-k="7">7</button>
     <button data-k="8">8</button>
@@ -77,6 +90,7 @@
 </div>
 
 <script>
+const UNARY = ["sqrt", "sq", "inv", "log", "ln", "sin", "cos", "tan"];
 let current = "0", first = null, op = null, fresh = false;
 const display = document.getElementById("display");
 const expr = document.getElementById("expr");
@@ -100,16 +114,26 @@ async function press(k) {
       current = "0"; first = null; op = null; fresh = false;
       expr.textContent = "";
     } else if (k === "⌫") {
-      if (!fresh) current = current.length > 1 && current !== "-" + current.slice(1, 2) ? current.slice(0, -1) : "0";
-      } else if (k === "±") {
-     if (current !== "0") {
-    current = current.startsWith("-") ? current.slice(1) : "-" + current;
-  }
+      if (!fresh) {
+        current = current.slice(0, -1);
+        if (current === "" || current === "-") current = "0";
+      }
+    } else if (k === "±") {
+      if (current !== "0") {
+        current = current.startsWith("-") ? current.slice(1) : "-" + current;
+      }
     } else if (k === "=") {
       if (op === null || fresh) return;
       const result = await compute();
       expr.textContent = `${first} ${op} ${current} =`;
       current = result; first = null; op = null; fresh = true;
+    } else if (UNARY.includes(k)) {
+      const q = `a=${encodeURIComponent(current)}&op=${k}&b=0`;
+      const data = await (await fetch("/calc?" + q)).json();
+      if (data.error) throw new Error(data.error);
+      expr.textContent = `${k}(${current}) =`;
+      current = data.result.replace(/\.0$/, "");
+      fresh = true;
     } else {
       if (op !== null && !fresh) { first = await compute(); current = first; }
       else first = current;
