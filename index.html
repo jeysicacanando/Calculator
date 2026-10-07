@@ -49,10 +49,10 @@
     <div id="display">0</div>
   </div>
   <div id="keys">
-    <button class="fn" data-k="C">C</button>
-    <button class="fn" data-k="⌫">⌫</button>
-    <button class="op" data-k="%">%</button>
-    <button class="op" data-k="/">÷</button>
+  <button class="fn" data-k="C">C</button>
+  <button class="fn" data-k="±">±</button>
+  <button class="op" data-k="%">%</button>
+  <button class="op" data-k="/">÷</button>
 
     <button data-k="7">7</button>
     <button data-k="8">8</button>
@@ -100,7 +100,11 @@ async function press(k) {
       current = "0"; first = null; op = null; fresh = false;
       expr.textContent = "";
     } else if (k === "⌫") {
-      if (!fresh) current = current.length > 1 ? current.slice(0, -1) : "0";
+      if (!fresh) current = current.length > 1 && current !== "-" + current.slice(1, 2) ? current.slice(0, -1) : "0";
+      } else if (k === "±") {
+     if (current !== "0") {
+    current = current.startsWith("-") ? current.slice(1) : "-" + current;
+  }
     } else if (k === "=") {
       if (op === null || fresh) return;
       const result = await compute();
