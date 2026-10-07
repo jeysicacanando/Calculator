@@ -44,6 +44,46 @@
   .fn { background: #666; }
   .eq { background: #ff9500; }
   .sci { background: #555; font-size: 18px; padding: 14px 0; }
+
+  #history-box {
+    margin-top: 20px;
+    border-top: 1px solid #444;
+    padding-top: 12px;
+    color: #ccc;
+  }
+  #history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #clear-hist {
+    font-size: 12px;
+    padding: 6px 10px;
+    background: #444;
+  }
+  #history {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  #history li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 6px;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #history li:hover { background: #333; }
+  #history .res { color: white; font-weight: bold; }
+  #history .empty { color: #777; cursor: default; justify-content: center; }
+  #history .empty:hover { background: none; }
 </style>
 
 <div id="calc">
@@ -87,14 +127,79 @@
     <button class="op" data-k="**">^</button>
     <button class="eq" data-k="=">=</button>
   </div>
+
+  <div id="history-box">
+    <div id="history-head">
+      <span>History</span>
+      <button id="clear-hist">Clear</button>
+    </div>
+    <ul id="history"></ul>
+  </div>
 </div>
 
 <script>
 const UNARY = ["sqrt", "sq", "inv", "log", "ln", "sin", "cos", "tan"];
+const SYMBOLS = { "*": "×", "/": "÷", "-": "−", "**": "^" };
 let current = "0", first = null, op = null, fresh = false;
 const display = document.getElementById("display");
 const expr = document.getElementById("expr");
+const historyList = document.getElementById("history");
 
+// ---------- History ----------
+let history = [];
+try {
+  history = JSON.parse(localStorage.getItem("calcHistory")) || [];
+} catch (e) {
+  history = [];
+}
+
+function saveHistory() {
+  try { localStorage.setItem("calcHistory", JSON.stringify(history)); } catch (e) {}
+}
+
+function renderHistory() {
+  historyList.innerHTML = "";
+  if (history.length === 0) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "No calculations yet";
+    historyList.appendChild(li);
+    return;
+  }
+  history.forEach(item => {
+    const li = document.createElement("li");
+    const left = document.createElement("span");
+    left.textContent = item.text + " =";
+    const right = document.createElement("span");
+    right.className = "res";
+    right.textContent = item.result;
+    li.append(left, right);
+    li.addEventListener("click", () => {
+      current = item.result;
+      first = null; op = null; fresh = true;
+      expr.textContent = item.text + " =";
+      display.textContent = current;
+    });
+    historyList.appendChild(li);
+  });
+}
+
+function addHistory(text, result) {
+  history.unshift({ text, result });
+  if (history.length > 10) history.pop();
+  saveHistory();
+  renderHistory();
+}
+
+document.getElementById("clear-hist").addEventListener("click", () => {
+  history = [];
+  saveHistory();
+  renderHistory();
+});
+
+renderHistory();
+
+// ---------- Calculator ----------
 async function compute() {
   const q = `a=${encodeURIComponent(first)}&op=${encodeURIComponent(op)}&b=${encodeURIComponent(current)}`;
   const data = await (await fetch("/calc?" + q)).json();
@@ -125,20 +230,25 @@ async function press(k) {
     } else if (k === "=") {
       if (op === null || fresh) return;
       const result = await compute();
-      expr.textContent = `${first} ${op} ${current} =`;
+      const text = `${first} ${SYMBOLS[op] || op} ${current}`;
+      expr.textContent = text + " =";
+      addHistory(text, result);
       current = result; first = null; op = null; fresh = true;
     } else if (UNARY.includes(k)) {
       const q = `a=${encodeURIComponent(current)}&op=${k}&b=0`;
       const data = await (await fetch("/calc?" + q)).json();
       if (data.error) throw new Error(data.error);
-      expr.textContent = `${k}(${current}) =`;
-      current = data.result.replace(/\.0$/, "");
+      const result = data.result.replace(/\.0$/, "");
+      const text = `${k}(${current})`;
+      expr.textContent = text + " =";
+      addHistory(text, result);
+      current = result;
       fresh = true;
     } else {
       if (op !== null && !fresh) { first = await compute(); current = first; }
       else first = current;
       op = k; fresh = true;
-      expr.textContent = `${first} ${op}`;
+      expr.textContent = `${first} ${SYMBOLS[op] || op}`;
     }
   } catch (e) {
     current = "0"; first = null; op = null; fresh = false;
