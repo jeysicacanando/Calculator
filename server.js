@@ -21,7 +21,7 @@ http.createServer((req, res) => {
         : { result: stdout.trim() }));
     });
   } else {
-    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(fs.readFileSync("index.html"));
   }
 }).listen(3000, () => console.log("Running at http://localhost:3000"));

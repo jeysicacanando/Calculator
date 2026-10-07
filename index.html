@@ -1,71 +1,132 @@
+<meta charset="UTF-8">
 <style>
   body {
     font-family: Arial, sans-serif;
     background: #f0f2f5;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center;
     padding: 40px;
   }
-  h1 { color: #333; }
-  input, select, button {
-    font-size: 20px;
-    padding: 10px;
-    margin: 5px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+  #calc {
+    width: 320px;
+    background: #222;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   }
-  input { width: 100px; }
-  button {
-    background: #4a7cff;
+  #screen {
     color: white;
+    text-align: right;
+    padding: 10px 5px 20px;
+    overflow: hidden;
+  }
+  #expr { color: #999; font-size: 18px; height: 22px; }
+  #display { font-size: 48px; font-weight: bold; }
+  #keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  button {
+    font-size: 22px;
+    padding: 18px 0;
     border: none;
+    border-radius: 12px;
+    background: #444;
+    color: white;
     cursor: pointer;
   }
-  button:hover { background: #3a63cc; }
-  #out {
-    font-size: 32px;
-    font-weight: bold;
-    color: #222;
-  }
-  #history {
-    list-style: none;
-    padding: 0;
-    color: #555;
-    font-size: 18px;
-  }
+  button:hover { filter: brightness(1.2); }
+  button:active { transform: scale(0.95); }
+  .op { background: #4a7cff; }
+  .fn { background: #666; }
+  .eq { background: #ff9500; }
 </style>
 
-<h1>Calculator</h1>
-<div>
-  <input id="a" type="number">
-  <select id="op">
-    <option>+</option><option>-</option><option>*</option><option>/</option><option>%</option><option>**</option>
-  </select>
-  <input id="b" type="number">
-  <button onclick="calc()">=</button>
+<div id="calc">
+  <div id="screen">
+    <div id="expr"></div>
+    <div id="display">0</div>
+  </div>
+  <div id="keys">
+    <button class="fn" data-k="C">C</button>
+    <button class="fn" data-k="⌫">⌫</button>
+    <button class="op" data-k="%">%</button>
+    <button class="op" data-k="/">÷</button>
+
+    <button data-k="7">7</button>
+    <button data-k="8">8</button>
+    <button data-k="9">9</button>
+    <button class="op" data-k="*">×</button>
+
+    <button data-k="4">4</button>
+    <button data-k="5">5</button>
+    <button data-k="6">6</button>
+    <button class="op" data-k="-">−</button>
+
+    <button data-k="1">1</button>
+    <button data-k="2">2</button>
+    <button data-k="3">3</button>
+    <button class="op" data-k="+">+</button>
+
+    <button data-k="0">0</button>
+    <button data-k=".">.</button>
+    <button class="op" data-k="**">^</button>
+    <button class="eq" data-k="=">=</button>
+  </div>
 </div>
-<p id="out"></p>
-<ul id="history"></ul>
 
 <script>
-const calcHistory = [];
+let current = "0", first = null, op = null, fresh = false;
+const display = document.getElementById("display");
+const expr = document.getElementById("expr");
 
-async function calc() {
-  const a = document.getElementById("a").value;
-  const op = document.getElementById("op").value;
-  const b = document.getElementById("b").value;
-  const q = `a=${encodeURIComponent(a)}&op=${encodeURIComponent(op)}&b=${encodeURIComponent(b)}`;
+async function compute() {
+  const q = `a=${encodeURIComponent(first)}&op=${encodeURIComponent(op)}&b=${encodeURIComponent(current)}`;
   const data = await (await fetch("/calc?" + q)).json();
-  document.getElementById("out").textContent = data.result ?? data.error;
-
-  if (data.result) {
-    calcHistory.unshift(`${a} ${op} ${b} = ${data.result}`);
-    if (calcHistory.length > 5) calcHistory.pop();
-    document.getElementById("history").innerHTML =
-      calcHistory.map(h => `<li>${h}</li>`).join("");
-  }
+  if (data.error) throw new Error(data.error);
+  return data.result.replace(/\.0$/, "");
 }
 
-document.addEventListener("keydown", e => { if (e.key === "Enter") calc(); });
+async function press(k) {
+  try {
+    if (/^\d$/.test(k)) {
+      current = (fresh || current === "0") ? k : current + k;
+      fresh = false;
+    } else if (k === ".") {
+      if (fresh) { current = "0."; fresh = false; }
+      else if (!current.includes(".")) current += ".";
+    } else if (k === "C") {
+      current = "0"; first = null; op = null; fresh = false;
+      expr.textContent = "";
+    } else if (k === "⌫") {
+      if (!fresh) current = current.length > 1 ? current.slice(0, -1) : "0";
+    } else if (k === "=") {
+      if (op === null || fresh) return;
+      const result = await compute();
+      expr.textContent = `${first} ${op} ${current} =`;
+      current = result; first = null; op = null; fresh = true;
+    } else {
+      if (op !== null && !fresh) { first = await compute(); current = first; }
+      else first = current;
+      op = k; fresh = true;
+      expr.textContent = `${first} ${op}`;
+    }
+  } catch (e) {
+    current = "0"; first = null; op = null; fresh = false;
+    expr.textContent = e.message;
+  }
+  display.textContent = current;
+}
+
+document.getElementById("keys").addEventListener("click", e => {
+  if (e.target.dataset.k) press(e.target.dataset.k);
+});
+
+document.addEventListener("keydown", e => {
+  if (/^[\d.+\-*/%]$/.test(e.key)) press(e.key);
+  else if (e.key === "Enter") { e.preventDefault(); press("="); }
+  else if (e.key === "Backspace") press("⌫");
+  else if (e.key === "Escape") press("C");
+});
 </script>
