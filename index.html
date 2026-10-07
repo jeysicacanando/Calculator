@@ -1,28 +1,67 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
 <style>
+  /* Light theme (default) */
+  :root {
+    --page-bg: #f0f2f5;
+    --calc-bg: #ffffff;
+    --text: #222;
+    --muted: #777;
+    --btn-bg: #e4e6eb;
+    --btn-text: #222;
+    --fn-bg: #cfd3da;
+    --sci-bg: #d8dbe1;
+    --op-bg: #4a7cff;
+    --eq-bg: #ff9500;
+    --border: #ddd;
+    --hover-bg: #f0f2f5;
+    --shadow: rgba(0,0,0,0.15);
+  }
+  /* Dark theme: same names, different values */
+  :root[data-theme="dark"] {
+    --page-bg: #121212;
+    --calc-bg: #222;
+    --text: #fff;
+    --muted: #999;
+    --btn-bg: #444;
+    --btn-text: #fff;
+    --fn-bg: #666;
+    --sci-bg: #555;
+    --border: #444;
+    --hover-bg: #333;
+    --shadow: rgba(0,0,0,0.6);
+  }
+
   body {
     font-family: Arial, sans-serif;
-    background: #f0f2f5;
+    background: var(--page-bg);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding: 40px;
+    transition: background 0.3s;
   }
   #calc {
     width: 320px;
-    background: #222;
+    background: var(--calc-bg);
     border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 30px var(--shadow);
+    transition: background 0.3s;
+  }
+  #top { display: flex; justify-content: flex-end; }
+  #theme {
+    font-size: 18px;
+    padding: 6px 10px;
+    background: var(--btn-bg);
   }
   #screen {
-    color: white;
+    color: var(--text);
     text-align: right;
     padding: 10px 5px 20px;
     overflow: hidden;
   }
-  #expr { color: #999; font-size: 18px; height: 22px; }
+  #expr { color: var(--muted); font-size: 18px; height: 22px; }
   #display { font-size: 48px; font-weight: bold; }
   #keys {
     display: grid;
@@ -34,22 +73,22 @@
     padding: 18px 0;
     border: none;
     border-radius: 12px;
-    background: #444;
-    color: white;
+    background: var(--btn-bg);
+    color: var(--btn-text);
     cursor: pointer;
   }
-  button:hover { filter: brightness(1.2); }
+  button:hover { filter: brightness(1.15); }
   button:active { transform: scale(0.95); }
-  .op { background: #4a7cff; }
-  .fn { background: #666; }
-  .eq { background: #ff9500; }
-  .sci { background: #555; font-size: 18px; padding: 14px 0; }
+  .op { background: var(--op-bg); color: white; }
+  .fn { background: var(--fn-bg); }
+  .eq { background: var(--eq-bg); color: white; }
+  .sci { background: var(--sci-bg); font-size: 18px; padding: 14px 0; }
 
   #history-box {
     margin-top: 20px;
-    border-top: 1px solid #444;
+    border-top: 1px solid var(--border);
     padding-top: 12px;
-    color: #ccc;
+    color: var(--muted);
   }
   #history-head {
     display: flex;
@@ -62,7 +101,6 @@
   #clear-hist {
     font-size: 12px;
     padding: 6px 10px;
-    background: #444;
   }
   #history {
     list-style: none;
@@ -80,13 +118,16 @@
     font-size: 15px;
     cursor: pointer;
   }
-  #history li:hover { background: #333; }
-  #history .res { color: white; font-weight: bold; }
-  #history .empty { color: #777; cursor: default; justify-content: center; }
+  #history li:hover { background: var(--hover-bg); }
+  #history .res { color: var(--text); font-weight: bold; }
+  #history .empty { cursor: default; justify-content: center; }
   #history .empty:hover { background: none; }
 </style>
 
 <div id="calc">
+  <div id="top">
+    <button id="theme" title="Toggle theme">🌙</button>
+  </div>
   <div id="screen">
     <div id="expr"></div>
     <div id="display">0</div>
@@ -144,6 +185,25 @@ let current = "0", first = null, op = null, fresh = false;
 const display = document.getElementById("display");
 const expr = document.getElementById("expr");
 const historyList = document.getElementById("history");
+
+// ---------- Theme ----------
+const root = document.documentElement;
+const themeBtn = document.getElementById("theme");
+
+function setTheme(t) {
+  root.dataset.theme = t;
+  themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+  try { localStorage.setItem("theme", t); } catch (e) {}
+}
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem("theme"); } catch (e) {}
+setTheme(savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+
+themeBtn.addEventListener("click", () => {
+  setTheme(root.dataset.theme === "dark" ? "light" : "dark");
+  themeBtn.blur(); // so pressing Enter later doesn't re-click this button
+});
 
 // ---------- History ----------
 let history = [];
